@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E-Voting Pemilihan Calon Formatur IPM & Dashboard Admin (Client-Server)</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ipm: {
+              yellow: '#F59E0B',
+              yellowDark: '#D97706',
+              yellowLight: '#FEF3C7',
+              green: '#047857',
+              greenDark: '#065F46',
+              greenLight: '#D1FAE5',
+              dark: '#1F2937'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            heading: ['Plus Jakarta Sans', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #F8FAFC;
+      color: #1F2937;
+    }
+    
+    .font-heading {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    .selected-card {
+      border-color: #F59E0B !important;
+      background-color: #FFFBEB !important;
+      box-shadow: 0 10px 15px -3px rgba(245, 158, 11, 0.18), 0 4px 6px -2px rgba(245, 158, 11, 0.08);
+    }
+
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+
+    @media print {
+      body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-only {
+        display: block !important;
+      }
+      .print-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+      }
+      @page {
+        margin: 1.5cm;
+        size: A4 portrait;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between antialiased selection:bg-amber-100 selection:text-amber-800">
+
+  <div id="app" class="relative min-h-screen flex flex-col">
+
+    <!-- 1. LOGIN SCREEN -->
+    <div id="login-screen" class="min-h-screen flex flex-col justify-center items-center px-4 py-8 bg-slate-50 relative overflow-hidden">
+      <div class="absolute -top-32 -left-32 w-96 h-96 bg-amber-400/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="w-full max-w-md relative z-10">
+        <div class="text-center mb-6">
+          <div class="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-300 text-white shadow-xl shadow-amber-500/30 mb-3 ring-8 ring-white/80 transform hover:scale-105 transition-transform duration-300">
+            <div class="flex flex-col items-center justify-center text-center">
+              <i class="fa-solid fa-graduation-cap text-2xl mb-0.5"></i>
+              <span class="text-[9px] font-extrabold tracking-widest font-heading uppercase">I P M</span>
+            </div>
+          </div>
+          <h1 class="text-2xl font-extrabold font-heading text-slate-900 tracking-tight">E-VOTING FORMATUR IPM</h1>
+          <p class="text-[11px] font-bold tracking-wider text-emerald-700 uppercase mt-0.5">Musyawarah Ikatan Pelajar Muhammadiyah</p>
+        </div>
+
+        <!-- Role Toggle Tabs -->
+        <div class="bg-slate-200/80 p-1 rounded-2xl mb-6 flex items-center border border-slate-300/50">
+          <button id="tab-voter-btn" onclick="switchLoginRole('voter')" 
+            class="flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 bg-white text-slate-900 shadow-sm">
+            <i class="fa-solid fa-user-check text-amber-500"></i>
+            <span>Akses Pemilih</span>
+          </button>
+          <button id="tab-admin-btn" onclick="switchLoginRole('admin')" 
+            class="flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 text-slate-600 hover:text-slate-900">
+            <i class="fa-solid fa-user-gear text-emerald-700"></i>
+            <span>Akses Admin / Panlih</span>
+          </button>
+        </div>
+
+        <!-- VOTER LOGIN FORM -->
+        <div id="voter-form-card" class="bg-white rounded-3xl shadow-xl shadow-slate-200/80 border border-slate-100 p-6 sm:p-8 backdrop-blur-sm">
+          <div class="text-center pb-4 mb-5 border-b border-slate-100">
+            <h2 class="text-base font-bold text-slate-800">Masukkan Kode Pemilih</h2>
+            <p class="text-xs text-slate-500 mt-1">Gunakan 4-digit kode unik dari PANLIH</p>
+          </div>
+
+          <form id="form-voter-login" onsubmit="handleVoterLogin(event)" class="space-y-6">
+            <div>
+              <div class="flex items-center justify-center gap-2 sm:gap-3" id="otp-container">
+                <input type="text" maxlength="1" pattern="[0-9]*" inputmode="numeric" required class="otp-input w-13 h-16 sm:w-14 sm:h-18 text-center text-2xl font-extrabold font-mono text-slate-800 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/20" onkeyup="onOtpKeyUp(event, 0)" onfocus="this.select()" autofocus>
+                <input type="text" maxlength="1" pattern="[0-9]*" inputmode="numeric" required class="otp-input w-13 h-16 sm:w-14 sm:h-18 text-center text-2xl font-extrabold font-mono text-slate-800 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/20" onkeyup="onOtpKeyUp(event, 1)" onfocus="this.select()">
+                <input type="text" maxlength="1" pattern="[0-9]*" inputmode="numeric" required class="otp-input w-13 h-16 sm:w-14 sm:h-18 text-center text-2xl font-extrabold font-mono text-slate-800 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/20" onkeyup="onOtpKeyUp(event, 2)" onfocus="this.select()">
+                <input type="text" maxlength="1" pattern="[0-9]*" inputmode="numeric" required class="otp-input w-13 h-16 sm:w-14 sm:h-18 text-center text-2xl font-extrabold font-mono text-slate-800 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/20" onkeyup="onOtpKeyUp(event, 3)" onfocus="this.select()">
+              </div>
+            </div>
+
+            <button type="submit" id="btn-login-submit"
+              class="w-full py-3.5 px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2 group">
+              <i class="fa-solid fa-key text-xs"></i>
+              <span id="voter-login-text">Masuk Bilik Suara Anonim</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- ADMIN LOGIN FORM -->
+        <div id="admin-form-card" class="hidden bg-white rounded-3xl shadow-xl shadow-slate-200/80 border border-slate-100 p-6 sm:p-8 backdrop-blur-sm">
+          <div class="text-center pb-4 mb-5 border-b border-slate-100">
+            <h2 class="text-base font-bold text-slate-800">Login Panitia Pemilihan</h2>
+            <p class="text-xs text-slate-500 mt-1">Akses dashboard hasil real-time & kelola pemilu</p>
+          </div>
+
+          <form id="form-admin-login" onsubmit="handleAdminLogin(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Username Admin</label>
+              <div class="relative">
+                <i class="fa-solid fa-user absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="text" id="admin-username" required placeholder="admin"
+                  class="w-full pl-9 pr-4 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Password</label>
+              <div class="relative">
+                <i class="fa-solid fa-lock absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="password" id="admin-password" required placeholder="••••••••"
+                  class="w-full pl-9 pr-4 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              </div>
+            </div>
+            <button type="submit" id="btn-admin-submit"
+              class="w-full py-3 px-4 bg-gradient-to-r from-emerald-700 to-emerald-800 hover:from-emerald-800 hover:to-emerald-900 text-white font-bold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
+              <i class="fa-solid fa-right-to-bracket text-xs"></i>
+              <span id="admin-login-text">Masuk Dashboard Admin</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. MAIN VOTING SCREEN -->
+    <div id="voting-screen" class="hidden min-h-screen flex flex-col pb-28">
+      <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-400 text-white flex items-center justify-center font-bold text-lg shadow-md">
+              <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+            <div>
+              <h2 class="text-sm font-bold font-heading text-slate-800 leading-snug">E-VOTING FORMATUR IPM</h2>
+              <p class="text-[10px] text-emerald-700 font-bold uppercase tracking-wider flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                <span>Bilik Suara Aktif</span>
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+            <div class="text-left">
+              <p class="text-xs font-bold text-slate-800">Pemilih Anonim</p>
+              <p id="nav-voter-code" class="text-[10px] font-mono text-amber-700 font-semibold">Kode: ****-1234</p>
+            </div>
+          </div>
+          <button onclick="handleLogout()" class="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-red-600 border border-slate-200 rounded-lg flex items-center gap-1.5">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span class="hidden sm:inline">Keluar</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 flex-1 w-full">
+        <!-- Sticky Counter Bar -->
+        <div class="sticky top-16 z-20 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200 shadow-md p-4 mb-6">
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="w-full sm:w-auto flex-1">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-xs font-bold uppercase text-slate-600">Kuota Pemilihan Formatur:</span>
+                <span id="counter-badge" class="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                  <span id="selected-count">0</span> / 13 Terpilih
+                </span>
+              </div>
+              <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                <div id="selection-progress" class="bg-amber-500 h-full w-0 transition-all duration-300 rounded-full"></div>
+              </div>
+            </div>
+            <div id="counter-alert" class="w-full sm:w-auto text-center text-xs font-medium text-slate-500 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200">
+              <i class="fa-solid fa-circle-info text-amber-500"></i>
+              <span id="counter-alert-text">Pilih 13 calon lagi untuk mengirimkan suara.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mb-6">
+          <div class="relative w-full sm:w-80">
+            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input type="text" id="search-candidate" onkeyup="filterCandidates()" placeholder="Cari nama calon..." class="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500">
+          </div>
+          <button onclick="resetSelections()" class="text-xs text-red-600 font-semibold hover:bg-red-50 px-2.5 py-1 rounded-lg">
+            <i class="fa-solid fa-rotate-left mr-1"></i>Reset Pilihan
+          </button>
+        </div>
+
+        <div id="candidates-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+          <!-- Dynamically populated -->
+        </div>
+      </main>
+
+      <div class="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-lg border-t border-slate-200 shadow-2xl p-3 sm:p-4 no-print">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="hidden sm:flex w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 items-center justify-center text-amber-600 font-bold">
+              <i class="fa-solid fa-check-double text-lg"></i>
+            </div>
+            <div>
+              <p class="text-xs text-slate-500 font-medium">Status Pilihan</p>
+              <p class="text-sm font-extrabold text-slate-800">
+                <span id="bottom-selected-count" class="text-amber-600">0</span> dari 13 Terpilih
+              </p>
+            </div>
+          </div>
+          <button id="btn-submit-vote" disabled onclick="openConfirmationModal()" class="px-6 py-3 bg-slate-300 text-slate-500 font-bold text-xs sm:text-sm rounded-xl cursor-not-allowed transition-all flex items-center gap-2">
+            <span>Kirim Suara Rahasia</span>
+            <i class="fa-solid fa-paper-plane text-xs"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. MODALS (DETAIL & CONFIRMATION) -->
+    <!-- (Modal HTML remains structurally identical, controlled via JS) -->
+    <div id="modal-detail" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <div class="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+        <div class="p-5 bg-gradient-to-r from-amber-500 to-amber-600 text-white flex justify-between">
+          <div class="flex gap-3"><span id="modal-candidate-no" class="px-2.5 py-0.5 rounded-md bg-amber-900/30 text-white font-extrabold text-xs">No. --</span><h3 class="font-bold text-base">Profil Calon</h3></div>
+          <button onclick="closeDetailModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="p-6 overflow-y-auto flex-1 space-y-4">
+          <div class="flex items-center gap-4 border-b border-slate-100 pb-4">
+            <img id="modal-candidate-img" src="" class="w-20 h-20 rounded-2xl object-cover border-2 border-amber-400">
+            <div>
+              <h4 id="modal-candidate-name" class="font-bold text-lg text-slate-800">Nama</h4>
+              <p id="modal-candidate-branch" class="text-xs text-emerald-700 mt-0.5">Cabang</p>
+              <p id="modal-candidate-position" class="text-xs text-slate-500">Jabatan</p>
+            </div>
+          </div>
+          <div><h5 class="text-xs font-bold text-slate-500 mb-1">Visi Utama</h5><p id="modal-candidate-vision" class="text-xs text-slate-700 bg-amber-50 p-3 rounded-xl italic"></p></div>
+          <div><h5 class="text-xs font-bold text-slate-500 mb-1">Misi & Program</h5><ul id="modal-candidate-mission" class="text-xs text-slate-700 list-disc pl-4"></ul></div>
+        </div>
+        <div class="p-4 bg-slate-50 flex justify-end"><button onclick="closeDetailModal()" class="px-4 py-2 bg-slate-200 text-xs font-semibold rounded-xl">Tutup</button></div>
+      </div>
+    </div>
+
+    <div id="modal-confirmation" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
+      <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+        <div class="p-5 bg-slate-800 text-white flex justify-between">
+          <h3 class="font-bold text-base">Konfirmasi Suara</h3>
+          <button onclick="closeConfirmationModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="p-6 overflow-y-auto flex-1">
+          <div id="confirmation-selected-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5"></div>
+          <div class="mt-6 p-4 rounded-xl bg-amber-50 border border-amber-200">
+            <label class="flex items-start gap-3 cursor-pointer">
+              <input type="checkbox" id="check-disclaimer" onchange="toggleConfirmSubmitButton()" class="mt-0.5 w-4 h-4">
+              <span class="text-xs text-amber-900 font-medium">Saya menyatakan bahwa 13 calon ini adalah pilihan saya murni.</span>
+            </label>
+          </div>
+        </div>
+        <div class="p-4 bg-slate-50 flex justify-between gap-3">
+          <button onclick="closeConfirmationModal()" class="px-4 py-2 bg-white border border-slate-200 text-xs font-bold rounded-xl">Ubah Pilihan</button>
+          <button id="btn-final-submit" disabled onclick="processFinalVote()" class="px-6 py-2.5 bg-slate-300 text-slate-500 font-bold text-xs rounded-xl cursor-not-allowed flex items-center gap-2">
+            <i class="fa-solid fa-check"></i><span id="final-submit-text">Konfirmasi & Submit Server</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. DIGITAL RECEIPT SCREEN -->
+    <div id="success-screen" class="hidden min-h-screen py-8 px-4 bg-slate-100 flex flex-col items-center justify-center">
+      <div class="w-full max-w-3xl mb-6 flex justify-between no-print">
+        <a href="javascript:location.reload()" class="text-xs font-bold text-slate-600"><i class="fa-solid fa-house"></i> Halaman Utama</a>
+        <button onclick="window.print()" class="px-4 py-2 bg-slate-800 text-white font-bold text-xs rounded-xl"><i class="fa-solid fa-print"></i> Cetak Surat Suara</button>
+      </div>
+      <div class="w-full max-w-3xl bg-white rounded-3xl shadow-xl p-6 sm:p-10 print-container">
+        <div class="text-center border-b border-slate-200 pb-6 mb-6 no-print">
+          <h2 class="text-2xl font-extrabold text-slate-800">SUARA ANDA MASUK KE SERVER!</h2>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-xl text-xs mb-6">
+          <div><span class="text-slate-400 block text-[10px]">Kode Akses</span><span id="ballot-voter-code" class="font-mono text-slate-800 font-bold">****</span></div>
+          <div><span class="text-slate-400 block text-[10px]">Waktu Server</span><span id="ballot-timestamp" class="font-bold text-slate-800">--</span></div>
+          <div class="col-span-2 sm:col-span-3"><span class="text-slate-400 block text-[10px]">ID Transaksi Server</span><span id="ballot-hash" class="font-mono text-[10px] text-amber-700 font-bold">--</span></div>
+        </div>
+        <div>
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-slate-100 text-slate-700"><tr class="border-b"><th class="py-2.5 px-3">No</th><th class="py-2.5 px-3">Nama Formatur</th><th class="py-2.5 px-3 text-center">Status Data</th></tr></thead>
+            <tbody id="ballot-table-body" class="divide-y divide-slate-200"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. ADMIN DASHBOARD -->
+    <div id="admin-dashboard" class="hidden min-h-screen flex flex-col bg-slate-100 pb-12">
+      <header class="bg-slate-900 text-white sticky top-0 z-30 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold shadow-md"><i class="fa-solid fa-user-gear"></i></div>
+            <div><h2 class="text-sm font-bold font-heading text-white">PANEL ADMIN SERVER</h2><p id="server-status-indicator" class="text-[10px] text-emerald-400 font-semibold flex items-center gap-1"><span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping"></span> Live Connected</p></div>
+          </div>
+          <button onclick="handleAdminLogout()" class="px-3 py-1.5 text-xs bg-red-600/20 text-red-300 rounded-lg"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+        </div>
+      </header>
+      <main class="max-w-7xl mx-auto px-4 pt-6 flex-1 w-full space-y-6">
+        <!-- Quick Stats Cards Bar -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div class="bg-white p-4 rounded-2xl border border-slate-200">
+            <span class="text-xs font-bold text-slate-400 uppercase">Total Token Server</span>
+            <p id="stat-total-tokens" class="text-2xl font-extrabold text-slate-800 mt-2">0</p>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border border-slate-200">
+            <span class="text-xs font-bold text-slate-400 uppercase">Suara Masuk</span>
+            <p id="stat-votes-cast" class="text-2xl font-extrabold text-emerald-700 mt-2">0</p>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border border-slate-200">
+            <span class="text-xs font-bold text-slate-400 uppercase">Partisipasi Suara</span>
+            <p id="stat-turnout-percent" class="text-2xl font-extrabold text-amber-600 mt-2">0%</p>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border border-slate-200">
+            <span class="text-xs font-bold text-slate-400 uppercase">Jumlah Calon</span>
+            <p id="stat-total-candidates" class="text-2xl font-extrabold text-purple-700 mt-2">0</p>
+          </div>
+        </div>
+
+        <div class="bg-white p-1.5 rounded-2xl border shadow-sm flex flex-wrap gap-1">
+          <button id="adm-tab-results" onclick="switchAdminSubTab('results')" class="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-700 text-white flex items-center gap-2"><i class="fa-solid fa-chart-simple"></i> Perolehan Suara Server</button>
+          <button id="adm-tab-candidates" onclick="switchAdminSubTab('candidates')" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 flex items-center gap-2"><i class="fa-solid fa-user-pen"></i> Kelola Formatur</button>
+          <button id="adm-tab-tokens" onclick="switchAdminSubTab('tokens')" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 flex items-center gap-2"><i class="fa-solid fa-key"></i> Kelola Token Server</button>
+        </div>
+
+        <!-- TAB RESULTS -->
+        <div id="adm-view-results" class="space-y-4">
+          <div class="bg-white rounded-2xl p-6 shadow-sm border">
+            <div class="flex justify-between mb-4">
+              <h3 class="text-base font-bold">Perolehan Suara Real-time (Auto-Sync)</h3>
+              <button onclick="fetchServerData()" class="px-3 py-1 bg-slate-100 rounded text-xs"><i class="fa-solid fa-rotate"></i> Sync Sekarang</button>
+            </div>
+            <div id="admin-tally-container" class="space-y-3"></div>
+          </div>
+        </div>
+
+        <!-- TAB CANDIDATES -->
+        <div id="adm-view-candidates" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl p-6 shadow-sm border">
+             <button onclick="openAddCandidateModal()" class="px-4 py-2 bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center gap-2 mb-4"><i class="fa-solid fa-plus"></i> Tambah Candidate Ke Server</button>
+             <table class="w-full text-left text-xs"><tbody id="admin-candidates-table" class="divide-y divide-slate-200"></tbody></table>
+          </div>
+        </div>
+
+        <!-- TAB TOKENS -->
+        <div id="adm-view-tokens" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl p-6 shadow-sm border">
+             <button onclick="generateTokensInServer(20)" class="px-4 py-2 bg-amber-500 text-white font-bold text-xs rounded-xl flex items-center gap-2 mb-4"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate +20 Token di Server</button>
+             <table class="w-full text-left text-xs"><tbody id="admin-tokens-table" class="divide-y divide-slate-200"></tbody></table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC (CLIENT-SERVER) -->
+  <script>
+    // ==========================================
+    // 1. KONFIGURASI API BACKEND (UBAH URL INI)
+    // ==========================================
+    // Silakan masukkan URL server backend Anda (Node.js, PHP, Firebase, dll)
+    const API_BASE_URL = 'https://api.server-admin-panel-anda.com/v1';
+
+    // State Variables Global 
+    let candidatesList = [];
+    let registeredTokens = [];
+    let electionStatus = "ACTIVE";
+    let currentVoterCode = "";
+    let selectedCandidateIds = new Set();
+    const REQUIRED_QUOTA = 13;
+    let adminToken = ""; // Untuk menyimpan token autentikasi admin panel
+    let realTimeInterval = null;
+
+    // --- Mock Data Fallback (Jika Server Belum Aktif/Error untuk UI Testing) ---
+    const FALLBACK_CANDIDATES = [
+      { id: 1, name: "Ahmad Rifai", branch: "PC IPM Kotagede", position: "Ketua", vision: "Maju", mission: ["Satu"], img: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80", votes: 0 },
+      { id: 2, name: "Nabila Rahmawati", branch: "PC IPM Umbulharjo", position: "Sekretaris", vision: "Inklusif", mission: ["Dua"], img: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&q=80", votes: 0 }
+    ];
+    // --- Generate fallback dummy array of 13+ untuk testing
+    for(let i = 3; i<=16; i++) FALLBACK_CANDIDATES.push({id: i, name: "Calon " + i, branch: "Cabang", position: "Anggota", vision:"Visi", mission:["Misi"], img:"https://via.placeholder.com/100", votes: 0});
+
+    // ==========================================
+    // 2. FUNGSI FETCH DATA DARI SERVER ADMIN
+    // ==========================================
+    async function fetchServerData() {
+      try {
+        // --- CONTOH PEMANGGILAN API REAL ---
+        // const resCand = await fetch(`${API_BASE_URL}/candidates`);
+        // const resTok = await fetch(`${API_BASE_URL}/tokens`, { headers: { 'Authorization': `Bearer ${adminToken}` }});
+        
+        // --- SIMULASI KONEKSI (Hapus kode simulasi ini saat integrasi API real) ---
+        await new Promise(r => setTimeout(r, 500)); 
+        if(candidatesList.length === 0) {
+            candidatesList = FALLBACK_CANDIDATES;
+            registeredTokens = [{code: "1234", used: false}, {code: "5555", used: true}];
+        }
+        // -------------------------------------------------------------
+
+        renderCandidatesGrid();
+        if(document.getElementById('admin-dashboard').classList.contains('hidden') === false) {
+           renderAdminResults();
+           renderAdminCandidatesTable();
+           renderAdminTokensTable();
+        }
+      } catch (error) {
+        console.error("Gagal terhubung ke server:", error);
+        alert("Peringatan: Gagal terhubung ke server Admin Panel.");
+      }
+    }
+
+    // Panggil fetch awal saat aplikasi dibuka
+    fetchServerData();
+
+    // ==========================================
+    // 3. FUNGSI LOGIKA APLIKASI
+    // ==========================================
+    function switchLoginRole(role) {
+      document.getElementById('voter-form-card').classList.toggle('hidden', role !== 'voter');
+      document.getElementById('admin-form-card').classList.toggle('hidden', role !== 'admin');
+    }
+
+    function onOtpKeyUp(event, index) {
+      const inputs = document.querySelectorAll('.otp-input');
+      if (inputs[index].value.length === 1 && index < inputs.length - 1) inputs[index + 1].focus();
+      if (event.key === 'Backspace' && index > 0 && inputs[index].value === '') inputs[index - 1].focus();
+    }
+
+    // --- LOGIN PEMILIH KE SERVER ---
+    async function handleVoterLogin(e) {
+      e.preventDefault();
+      const inputs = document.querySelectorAll('.otp-input');
+      const code = Array.from(inputs).map(i => i.value).join('');
+      
+      const btnText = document.getElementById('voter-login-text');
+      btnText.textContent = "Memeriksa Server...";
+      
+      try {
+        // --- API CALL VALIDASI TOKEN ---[cite: 1]
+        // const res = await fetch(`${API_BASE_URL}/auth/voter`, { method: 'POST', body: JSON.stringify({ token: code }) });
+        // const data = await res.json();
+        
+        // Simulasi Logika Server (Hapus saat API real jalan)
+        await new Promise(r => setTimeout(r, 800));
+        let isValid = true; let isUsed = false;
+        let tok = registeredTokens.find(t => t.code === code);
+        if(tok && tok.used) { isUsed = true; isValid = false; }
+        // --------------------------------
+
+        if (isValid) {
+          currentVoterCode = code;
+          document.getElementById('nav-voter-code').textContent = `Kode: ****-${code}`;
+          document.getElementById('login-screen').classList.add('hidden');
+          document.getElementById('voting-screen').classList.remove('hidden');
+        } else if (isUsed) {
+          alert("Kode dari server menyatakan token ini SUDAH DIGUNAKAN!");
+        } else {
+          alert("Kode Token tidak valid di server Admin.");
+        }
+      } catch (error) {
+        alert("Gagal koneksi ke server.");
+      } finally {
+        btnText.textContent = "Masuk Bilik Suara Anonim";
+      }
+    }
+
+    // --- RENDER GRID KANDIDAT ---
+    function renderCandidatesGrid(filteredData = candidatesList) {
+      const container = document.getElementById('candidates-grid');
+      container.innerHTML = '';
+      filteredData.forEach(c => {
+        const isSelected = selectedCandidateIds.has(c.id);
+        const card = document.createElement('div');
+        card.className = `candidate-card bg-white rounded-2xl border p-4 flex flex-col justify-between ${isSelected ? 'selected-card border-amber-500' : 'border-slate-200'}`;
+        card.id = `candidate-card-${c.id}`;
+        card.innerHTML = `
+          <div class="flex items-center gap-3 mb-3">
+            <img src="${c.img}" class="w-16 h-16 rounded-xl object-cover">
+            <div>
+              <h3 class="font-bold text-sm">${c.name}</h3>
+              <p class="text-[11px] text-emerald-700">${c.branch}</p>
+            </div>
+          </div>
+          <button onclick="toggleCandidateSelection(${c.id})" id="btn-select-${c.id}" class="w-full py-2 px-3 font-bold text-xs rounded-xl ${isSelected ? 'bg-amber-500 text-white' : 'bg-slate-800 text-white'}">
+            ${isSelected ? 'Batal Pilih' : 'Pilih Formatur'}
+          </button>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function toggleCandidateSelection(candidateId) {
+      if (selectedCandidateIds.has(candidateId)) {
+        selectedCandidateIds.delete(candidateId);
+      } else {
+        if (selectedCandidateIds.size >= REQUIRED_QUOTA) return alert(`Maksimal ${REQUIRED_QUOTA} calon.`);
+        selectedCandidateIds.add(candidateId);
+      }
+      renderCandidatesGrid();
+      updateSelectionUI();
+    }
+
+    function updateSelectionUI() {
+      const count = selectedCandidateIds.size;
+      document.getElementById('selected-count').textContent = count;
+      document.getElementById('bottom-selected-count').textContent = count;
+      document.getElementById('selection-progress').style.width = `${(count / REQUIRED_QUOTA) * 100}%`;
+      
+      const submitBtn = document.getElementById('btn-submit-vote');
+      if (count === REQUIRED_QUOTA) {
+        submitBtn.disabled = false;
+        submitBtn.className = "px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-extrabold text-sm rounded-xl cursor-pointer animate-pulse";
+      } else {
+        submitBtn.disabled = true;
+        submitBtn.className = "px-6 py-3 bg-slate-200 text-slate-400 font-bold text-sm rounded-xl cursor-not-allowed";
+      }
+    }
+
+    function openConfirmationModal() {
+      if (selectedCandidateIds.size !== REQUIRED_QUOTA) return;
+      const grid = document.getElementById('confirmation-selected-grid');
+      grid.innerHTML = '';
+      candidatesList.filter(c => selectedCandidateIds.has(c.id)).forEach(c => {
+        grid.innerHTML += `<div class="p-2 bg-slate-50 border rounded text-xs font-bold">${c.name}</div>`;
+      });
+      document.getElementById('check-disclaimer').checked = false;
+      document.getElementById('btn-final-submit').disabled = true;
+      document.getElementById('modal-confirmation').classList.remove('hidden');
+    }
+
+    function closeConfirmationModal() { document.getElementById('modal-confirmation').classList.add('hidden'); }
+    function toggleConfirmSubmitButton() { document.getElementById('btn-final-submit').disabled = !document.getElementById('check-disclaimer').checked; }
+
+    // --- KIRIM SUARA KE SERVER (POST API) ---
+    async function processFinalVote() {
+      const btnSubmit = document.getElementById('btn-final-submit');
+      const btnText = document.getElementById('final-submit-text');
+      btnSubmit.disabled = true;
+      btnText.textContent = "Mengirim Data ke Server...";
+
+      const voteData = {
+        token: currentVoterCode,
+        candidates: Array.from(selectedCandidateIds)
+      };
+
+      try {
+        // --- API CALL KIRIM VOTE ---[cite: 1]
+        // const res = await fetch(`${API_BASE_URL}/vote/submit`, {
+        //   method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(voteData)
+        // });
+        // if (!res.ok) throw new Error("Gagal menyimpan ke server");
+
+        // Simulasi response server (Hapus saat API real jalan)
+        await new Promise(r => setTimeout(r, 1500));
+        let tok = registeredTokens.find(t => t.code === currentVoterCode);
+        if(tok) { tok.used = true; } else { registeredTokens.push({code: currentVoterCode, used: true}) }
+        Array.from(selectedCandidateIds).forEach(id => {
+           let c = candidatesList.find(x => x.id === id); if(c) c.votes++;
+        });
+        // --------------------------------------------------
+
+        closeConfirmationModal();
+        const serverHashId = "SVR-" + Math.random().toString(36).substr(2, 9).toUpperCase(); // Harusnya dari response server
+        
+        document.getElementById('ballot-voter-code').textContent = `****-${currentVoterCode}`;
+        document.getElementById('ballot-timestamp').textContent = new Date().toLocaleString('id-ID') + ' WIB';
+        document.getElementById('ballot-hash').textContent = serverHashId;
+        
+        const tbody = document.getElementById('ballot-table-body');
+        candidatesList.filter(c => selectedCandidateIds.has(c.id)).forEach((c, i) => {
+          tbody.innerHTML += `<tr><td class="py-2">${i+1}</td><td class="py-2 font-bold">${c.name}</td><td class="py-2 text-center text-emerald-600 font-bold">TERKIRIM KE SERVER</td></tr>`;
+        });
+
+        document.getElementById('voting-screen').classList.add('hidden');
+        document.getElementById('success-screen').classList.remove('hidden');
+
+      } catch (error) {
+        alert("Terjadi kesalahan sistem saat menghubungi Server Admin. Coba lagi.");
+        btnSubmit.disabled = false;
+        btnText.textContent = "Konfirmasi & Submit Server";
+      }
+    }
+
+
+    // ==========================================
+    // 4. ADMIN DASHBOARD LOGIC (CLIENT-SERVER)
+    // ==========================================
+
+    // --- LOGIN ADMIN KE SERVER ---
+    async function handleAdminLogin(e) {
+      e.preventDefault();
+      const u = document.getElementById('admin-username').value;
+      const p = document.getElementById('admin-password').value;
+      
+      document.getElementById('admin-login-text').textContent = "Otentikasi Server...";
+      
+      try {
+        // --- API CALL ADMIN LOGIN ---[cite: 1]
+        // const res = await fetch(`${API_BASE_URL}/auth/admin`, { method: 'POST', body: JSON.stringify({ user: u, pass: p }) });
+        // const data = await res.json();
+        // adminToken = data.token; // Simpan Bearer JWT token dari server
+        
+        // Simulasi Auth Server (Hapus jika menggunakan API real)
+        await new Promise(r => setTimeout(r, 800));
+        if(u !== 'admin' || p !== 'admin123') throw new Error("Kredensial salah");
+        adminToken = "simulated_jwt_token_123";
+        // --------------------------------------------------
+
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('admin-dashboard').classList.remove('hidden');
+        fetchServerData();
+        
+        // Auto-refresh data server tiap 5 detik untuk panel admin[cite: 1]
+        realTimeInterval = setInterval(fetchServerData, 5000); 
+
+      } catch (error) {
+        alert("Akses Server Ditolak: Username/Password salah!");
+      } finally {
+        document.getElementById('admin-login-text').textContent = "Masuk Dashboard Admin";
+      }
+    }
+
+    function handleAdminLogout() {
+      clearInterval(realTimeInterval);
+      adminToken = "";
+      location.reload();
+    }
+
+    function switchAdminSubTab(subtab) {
+      ['results', 'candidates', 'tokens'].forEach(v => {
+        document.getElementById(`adm-view-${v}`).classList.toggle('hidden', v !== subtab);
+      });
+      fetchServerData(); // Sync terbaru saat pindah tab
+    }
+
+    // Render Data Admin dari Variabel yang difetch Server
+    function renderAdminResults() {
+      document.getElementById('stat-total-tokens').textContent = registeredTokens.length;
+      document.getElementById('stat-votes-cast').textContent = registeredTokens.filter(t => t.used).length;
+      document.getElementById('stat-total-candidates').textContent = candidatesList.length;
+      
+      const container = document.getElementById('admin-tally-container');
+      container.innerHTML = '';
+      const sorted = [...candidatesList].sort((a, b) => b.votes - a.votes);
+      
+      sorted.forEach((c, i) => {
+        container.innerHTML += `
+          <div class="p-3 bg-slate-50 border rounded-xl flex justify-between items-center">
+            <div class="font-bold text-sm"><span class="mr-2 px-2 bg-slate-200 rounded">${i+1}</span> ${c.name}</div>
+            <div class="font-extrabold text-emerald-700">${c.votes} Suara</div>
+          </div>`;
+      });
+    }
+
+    function renderAdminCandidatesTable() {
+      const tbody = document.getElementById('admin-candidates-table');
+      tbody.innerHTML = '';
+      candidatesList.forEach(c => {
+         tbody.innerHTML += `<tr><td class="py-2">${c.id}</td><td class="py-2 font-bold">${c.name}</td><td class="py-2"><button onclick="deleteCandidateInServer(${c.id})" class="text-red-500"><i class="fa-solid fa-trash"></i> Hapus (Server)</button></td></tr>`;
+      });
+    }
+
+    function renderAdminTokensTable() {
+      const tbody = document.getElementById('admin-tokens-table');
+      tbody.innerHTML = '';
+      registeredTokens.forEach(t => {
+         tbody.innerHTML += `<tr><td class="py-2 font-mono font-bold">${t.code}</td><td class="py-2">${t.used ? '<span class="text-red-500">Terpakai</span>' : '<span class="text-emerald-500">Belum Dipakai</span>'}</td></tr>`;
+      });
+    }
+
+    // --- OPERASI UPDATE KE SERVER ---
+    async function deleteCandidateInServer(id) {
+       if(!confirm("Yakin hapus dari Server?")) return;
+       // API POST CALL: fetch(`${API_BASE_URL}/candidates/${id}`, { method: 'DELETE', headers: {'Authorization': adminToken} })[cite: 1]
+       candidatesList = candidatesList.filter(c => c.id !== id); // Simulasi
+       fetchServerData();
+    }
+
+    async function generateTokensInServer(count) {
+       // API POST CALL: fetch(`${API_BASE_URL}/tokens/generate`, { method: 'POST', body: JSON.stringify({count}), headers: {'Authorization': adminToken} })[cite: 1]
+       for(let i=0; i<count; i++) registeredTokens.push({code: Math.floor(1000 + Math.random() * 9000).toString(), used: false}); // Simulasi
+       fetchServerData();
+       alert(`${count} Token berhasil ditambahkan ke Server!`);
+    }
+  </script>
+</body>
+</html>
